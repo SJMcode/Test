@@ -1,0 +1,194 @@
+## Team END POINT
+#====================================================
+
+@RestController
+@RequestMapping("/teams")
+public class TeamEndPoint {
+    
+@Autowired
+TeamRepository teamRepo;
+
+@Autowired
+MemberRepository memberRepo;
+
+// @GetMapping
+// public List<Team>  getAllTeams(){
+//     return teamRepo.findAll();
+// }
+
+@GetMapping()
+public List<Team> getAllTeamsByYear(@RequestParam(name = "year", required = false) Integer year) {
+    if (null == year)
+        return teamRepo.findAll();
+
+    else
+        return teamRepo.findByYear(year);
+}
+
+@GetMapping(path = "/{id}")
+public Team getTeam(@PathVariable Long id) {
+     //Team team = teamRepo.getOne(id);
+     
+    //System.out.println(team.getMembers().size());
+ return  teamRepo.getOne(id);
+
+}
+
+@GetMapping(path = "/{id}/members")
+public List<Member> getTeamMembers(@PathVariable Long id) {
+
+        List<Member> member = teamRepo.getOne(id).getMembers();
+       return member;
+    }
+
+
+
+}
+
+#========================================================
+
+# Team Entity
+++++++++++++++++++++++++
+
+
+@Entity
+@Data
+@Table(name = "teams")
+public class Team {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "team_id")
+	private Long id;
+
+	@Column(name = "team_name")
+	String teamName;
+
+	int year;
+
+	@OneToOne(cascade = CascadeType.ALL)
+	@JoinColumn(name = "team_lead")
+	//@JsonIgnore
+	Member teamLead;
+
+	@ManyToMany(mappedBy = "teams",fetch = FetchType.LAZY)
+	//@JoinTable(name = "member_teams", joinColumns = @JoinColumn(name = "team_id"), inverseJoinColumns = @JoinColumn(name = "member_id"))
+	@JsonIgnore
+	private List<Member> members;
+}
+
+#=============================================================
+
+Member Entity
++++++++++++++++++++++++
+
+@Data
+@Entity
+@Table(name ="Members")
+public class Member{
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name ="member_id")
+    private Long id;
+
+	@Column(name = "first_name")
+	String firstName;
+	
+	@Column(name = "last_name")
+	String lastName;
+	
+	@Column(name = "membership_id")
+	String membershipId;
+	
+	@Column(name = "primary_phone")
+	Long primaryPhone;
+	
+	@Column(name = "whatsapp_phone")
+	String whatsappPhone;
+	
+	@Column(name = "email_address")
+	String emailAddress;
+	
+	boolean active;
+	
+	@ManyToOne(fetch = FetchType.EAGER)
+	@JoinColumn(name = "role_id")
+	Role role;
+	
+	@JsonIgnore
+	@OneToOne(mappedBy = "member")
+	MemberCredentials member_credentials;
+	
+	@ManyToMany
+	//@JsonIgnore
+	@JoinTable(name = "member_certifications", joinColumns = @JoinColumn(name = "member_id"), inverseJoinColumns = @JoinColumn(name = "certification_id"))
+	List<Certification> certifications;
+
+	@ManyToMany(cascade = {CascadeType.DETACH,CascadeType.MERGE, CascadeType.REFRESH,CascadeType.PERSIST},fetch = FetchType.LAZY)
+	@JsonIgnore
+	@JoinTable(name = "member_teams", joinColumns = @JoinColumn(name = "member_id"), inverseJoinColumns = @JoinColumn(name = "team_id"))
+	private List<Team> teams;
+
+}
+
+#====================================================
+
+Team Service
++++++++++++++++=====
+package org.itpn.service;
+
+import org.itpn.data.entities.Team;
+import org.itpn.web.pojos.MemberVO;
+
+import java.util.List;
+
+public interface TeamService {
+
+    List<Team> getAllTeams();
+
+    List<MemberVO> getAllTeamMember(Team team);
+}
+
+#+====================================================
+
+Team Service Implementation
++++++++++++++++++++++++++++++++
+package org.itpn.service;
+
+import org.itpn.data.entities.Member;
+import org.itpn.data.entities.Team;
+import org.itpn.data.repositories.MemberRepository;
+import org.itpn.data.repositories.TeamRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class TeamServiceImpl implements TeamService{
+
+    @Autowired
+    TeamRepository teamRepo;
+    @Autowired
+    MemberRepository memberRepo;
+
+    public TeamServiceImpl(TeamRepository teamRepo, MemberRepository memberRepo) {
+        this.teamRepo = teamRepo;
+        this.memberRepo = memberRepo;
+    }
+
+    @Override
+    public List<Team> getAllTeams() {
+        return teamRepo.findAll();
+    }
+
+    @Override
+    public List getAllTeamMember(Team team) {
+        List<Member> memberList = teamRepo.getOne(team.getId()).getMembers();
+        return memberList;
+    }
+
+
+
+}
